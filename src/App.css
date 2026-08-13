@@ -315,17 +315,17 @@
   width: 100%;
   height: 100%;
   overflow: auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   background-color: var(--bg-panel);
   border-radius: 12px;
   border: 1px solid var(--border-color);
   padding: 24px;
+  position: relative;
 }
 
 .canvas-wrapper canvas {
   transition: transform 0.1s ease-out;
+  display: block;
+  margin: 0 auto;
 }
 
 .preview-item {
