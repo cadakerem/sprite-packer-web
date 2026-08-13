@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { DragEvent as ReactDragEvent } from 'react';
+import TrimWorker from './workers/trimWorker?worker';
 import './App.css';
 import { MaxRectsPacker } from './utils/packer';
 import type { Rect } from './utils/packer';
@@ -15,57 +16,17 @@ interface SpriteAsset {
   trimRect: { x: number, y: number, w: number, h: number };
 }
 
+interface TexturePackerFrame {
+  frame: { x: number, y: number, w: number, h: number };
+  rotated: boolean;
+  trimmed: boolean;
+  spriteSourceSize: { x: number, y: number, w: number, h: number };
+  sourceSize: { w: number, h: number };
+}
+
 interface PackedAsset extends Rect {
   asset: SpriteAsset;
 }
-
-const calculateTrimRect = (img: HTMLImageElement) => {
-  const c = document.createElement('canvas');
-  c.width = img.width;
-  c.height = img.height;
-  const ctx = c.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return { x: 0, y: 0, w: img.width, h: img.height };
-  
-  ctx.drawImage(img, 0, 0);
-  const data = ctx.getImageData(0, 0, img.width, img.height).data;
-  
-  let top = 0, bottom = img.height - 1, left = 0, right = img.width - 1;
-  let found = false;
-  
-  // Top
-  for (let y = 0; y < img.height && !found; y++) {
-    for (let x = 0; x < img.width; x++) {
-      if (data[(y * img.width + x) * 4 + 3] !== 0) { top = y; found = true; break; }
-    }
-  }
-  if (!found) return { x: 0, y: 0, w: img.width, h: img.height }; // Empty image
-  
-  // Bottom
-  found = false;
-  for (let y = img.height - 1; y >= top && !found; y--) {
-    for (let x = 0; x < img.width; x++) {
-      if (data[(y * img.width + x) * 4 + 3] !== 0) { bottom = y; found = true; break; }
-    }
-  }
-  
-  // Left
-  found = false;
-  for (let x = 0; x < img.width && !found; x++) {
-    for (let y = top; y <= bottom; y++) {
-      if (data[(y * img.width + x) * 4 + 3] !== 0) { left = x; found = true; break; }
-    }
-  }
-  
-  // Right
-  found = false;
-  for (let x = img.width - 1; x >= left && !found; x--) {
-    for (let y = top; y <= bottom; y++) {
-      if (data[(y * img.width + x) * 4 + 3] !== 0) { right = x; found = true; break; }
-    }
-  }
-  
-  return { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
-};
 
 function App() {
   const algorithm = 'MaxRects';
@@ -93,23 +54,30 @@ function App() {
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
-        const trimRect = calculateTrimRect(img);
-        setAssets(prev => {
-          // Check if file with same name already exists to prevent duplicates
-          if (prev.some(a => a.name === file.name)) return prev;
+        const worker = new TrimWorker();
+        worker.onmessage = (e) => {
+          const { rect } = e.data;
           
-          const newAssets = [...prev, {
-            id: Math.random().toString(36).substring(7),
-            name: file.name,
-            url,
-            width: img.width,
-            height: img.height,
-            file,
-            imgElement: img,
-            trimRect
-          }];
-          return newAssets.sort((a, b) => a.name.localeCompare(b.name));
-        });
+          setAssets(prev => {
+            // Check if file with same name already exists to prevent duplicates
+            if (prev.some(a => a.name === file.name)) return prev;
+            
+            const newAssets = [...prev, {
+              id: Math.random().toString(36).substring(7),
+              name: file.name,
+              url,
+              width: img.width,
+              height: img.height,
+              file,
+              imgElement: img,
+              trimRect: rect
+            }];
+            return newAssets.sort((a, b) => a.name.localeCompare(b.name));
+          });
+          
+          worker.terminate();
+        };
+        worker.postMessage({ file, id: file.name });
       };
       img.src = url;
     });
@@ -230,8 +198,8 @@ function App() {
     // Auto-fit Zoom
     setTimeout(() => {
       if (wrapperRef.current && currentW > 0 && currentH > 0) {
-        const availableW = wrapperRef.current.clientWidth - 64;
-        const availableH = wrapperRef.current.clientHeight - 64;
+        const availableW = wrapperRef.current.clientWidth - 48; // 24px padding * 2
+        const availableH = wrapperRef.current.clientHeight - 48;
         const scaleX = availableW / currentW;
         const scaleY = availableH / currentH;
         const bestScale = Math.min(scaleX, scaleY, 1);
@@ -319,7 +287,7 @@ function App() {
           sourceSize: { w: p.asset.width, h: p.asset.height }
         };
         return acc;
-      }, {} as any)
+      }, {} as Record<string, TexturePackerFrame>)
     };
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(jsonData, null, 2));
