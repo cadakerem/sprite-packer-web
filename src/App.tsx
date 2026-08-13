@@ -1,4 +1,4 @@
-import { useState, useRef, DragEvent, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { DragEvent as ReactDragEvent } from 'react';
 import './App.css';
 import { MaxRectsPacker } from './utils/packer';
@@ -68,7 +68,7 @@ const calculateTrimRect = (img: HTMLImageElement) => {
 };
 
 function App() {
-  const [algorithm, setAlgorithm] = useState('MaxRects');
+  const algorithm = 'MaxRects';
   const [autoSize, setAutoSize] = useState(true);
   const [allowRotate, setAllowRotate] = useState(false);
   const [enableTrim, setEnableTrim] = useState(false);
