@@ -248,6 +248,7 @@
 
 .dropzone-container {
   flex: 1;
+  min-height: 0; /* CRITICAL FIX for flexbox overflow */
   display: flex;
   align-items: center;
   justify-content: center;
