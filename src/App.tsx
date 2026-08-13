@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import type { DragEvent } from 'react';
+import { useState, useRef, DragEvent, useEffect } from 'react';
+import type { DragEvent as ReactDragEvent } from 'react';
 import './App.css';
 import { MaxRectsPacker } from './utils/packer';
 import type { Rect } from './utils/packer';
@@ -12,15 +12,66 @@ interface SpriteAsset {
   height: number;
   file: File;
   imgElement?: HTMLImageElement;
+  trimRect: { x: number, y: number, w: number, h: number };
 }
 
 interface PackedAsset extends Rect {
   asset: SpriteAsset;
 }
 
+const calculateTrimRect = (img: HTMLImageElement) => {
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return { x: 0, y: 0, w: img.width, h: img.height };
+  
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, img.width, img.height).data;
+  
+  let top = 0, bottom = img.height - 1, left = 0, right = img.width - 1;
+  let found = false;
+  
+  // Top
+  for (let y = 0; y < img.height && !found; y++) {
+    for (let x = 0; x < img.width; x++) {
+      if (data[(y * img.width + x) * 4 + 3] !== 0) { top = y; found = true; break; }
+    }
+  }
+  if (!found) return { x: 0, y: 0, w: img.width, h: img.height }; // Empty image
+  
+  // Bottom
+  found = false;
+  for (let y = img.height - 1; y >= top && !found; y--) {
+    for (let x = 0; x < img.width; x++) {
+      if (data[(y * img.width + x) * 4 + 3] !== 0) { bottom = y; found = true; break; }
+    }
+  }
+  
+  // Left
+  found = false;
+  for (let x = 0; x < img.width && !found; x++) {
+    for (let y = top; y <= bottom; y++) {
+      if (data[(y * img.width + x) * 4 + 3] !== 0) { left = x; found = true; break; }
+    }
+  }
+  
+  // Right
+  found = false;
+  for (let x = img.width - 1; x >= left && !found; x--) {
+    for (let y = top; y <= bottom; y++) {
+      if (data[(y * img.width + x) * 4 + 3] !== 0) { right = x; found = true; break; }
+    }
+  }
+  
+  return { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
+};
+
 function App() {
   const [algorithm, setAlgorithm] = useState('MaxRects');
   const [autoSize, setAutoSize] = useState(true);
+  const [allowRotate, setAllowRotate] = useState(false);
+  const [enableTrim, setEnableTrim] = useState(false);
   const [targetWidth, setTargetWidth] = useState(1024);
   const [targetHeight, setTargetHeight] = useState(1024);
   const [padding, setPadding] = useState(2);
@@ -34,7 +85,6 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Dosyaları okuma ve resim boyutlarını alma
   const processFiles = (files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
       if (!file.type.startsWith('image/')) return;
@@ -42,31 +92,37 @@ function App() {
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
-        setAssets(prev => [...prev, {
-          id: Math.random().toString(36).substring(7),
-          name: file.name,
-          url,
-          width: img.width,
-          height: img.height,
-          file,
-          imgElement: img
-        }]);
+        const trimRect = calculateTrimRect(img);
+        setAssets(prev => {
+          const newAssets = [...prev, {
+            id: Math.random().toString(36).substring(7),
+            name: file.name,
+            url,
+            width: img.width,
+            height: img.height,
+            file,
+            imgElement: img,
+            trimRect
+          }];
+          // Group by sorting alphabetically
+          return newAssets.sort((a, b) => a.name.localeCompare(b.name));
+        });
       };
       img.src = url;
     });
   };
 
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -74,7 +130,6 @@ function App() {
     }
   };
 
-  // Paketleme (Packing) Algoritmasını Çalıştırma
   useEffect(() => {
     if (assets.length === 0) {
       setPackedAssets([]);
@@ -82,16 +137,19 @@ function App() {
       return;
     }
 
-    // Resimleri yüksekliğe göre büyükten küçüğe sırala (daha iyi yerleşim için)
-    const sortedAssets = [...assets].sort((a, b) => b.height - a.height);
+    const sortedAssets = [...assets].sort((a, b) => {
+      const aHeight = enableTrim ? a.trimRect.h : a.height;
+      const bHeight = enableTrim ? b.trimRect.h : b.height;
+      return bHeight - aHeight;
+    });
+
     let packed: PackedAsset[] = [];
     let currentW = targetWidth;
     let currentH = targetHeight;
 
     if (autoSize) {
-      // Auto-size mantığı: En büyük resmi baz alarak başla ve sığana kadar Canvas'ı büyüt
-      currentW = Math.max(...sortedAssets.map(a => a.width + padding * 2), 256);
-      currentH = Math.max(...sortedAssets.map(a => a.height + padding * 2), 256);
+      currentW = Math.max(...sortedAssets.map(a => (enableTrim ? a.trimRect.w : a.width) + padding * 2), 256);
+      currentH = Math.max(...sortedAssets.map(a => (enableTrim ? a.trimRect.h : a.height) + padding * 2), 256);
       
       let success = false;
       while (!success && currentW <= 8192 && currentH <= 8192) {
@@ -100,19 +158,22 @@ function App() {
         success = true;
 
         for (const asset of sortedAssets) {
-          const rect = packer.insert(asset.width + padding * 2, asset.height + padding * 2, asset.id);
+          const w = enableTrim ? asset.trimRect.w : asset.width;
+          const h = enableTrim ? asset.trimRect.h : asset.height;
+          
+          const rect = packer.insert(w + padding * 2, h + padding * 2, asset.id, allowRotate);
           if (rect) {
             packed.push({
               ...rect,
-              x: rect.x + padding, // Padding'i içeriye doğru uygula
+              x: rect.x + padding,
               y: rect.y + padding,
-              width: asset.width,
-              height: asset.height,
+              width: rect.rotated ? h : w,
+              height: rect.rotated ? w : h,
               asset
             });
           } else {
             success = false;
-            break; // Sığmadı, daha büyük canvas dene
+            break;
           }
         }
 
@@ -122,7 +183,6 @@ function App() {
         }
       }
 
-      // Sığdıktan sonra gereksiz boşlukları kırp (Trim bounding box)
       if (success && packed.length > 0) {
         let maxRight = 0;
         let maxBottom = 0;
@@ -135,17 +195,18 @@ function App() {
       }
 
     } else {
-      // Manuel boyut
       const packer = new MaxRectsPacker(currentW, currentH);
       for (const asset of sortedAssets) {
-        const rect = packer.insert(asset.width + padding * 2, asset.height + padding * 2, asset.id);
+        const w = enableTrim ? asset.trimRect.w : asset.width;
+        const h = enableTrim ? asset.trimRect.h : asset.height;
+        const rect = packer.insert(w + padding * 2, h + padding * 2, asset.id, allowRotate);
         if (rect) {
           packed.push({
             ...rect,
             x: rect.x + padding,
             y: rect.y + padding,
-            width: asset.width,
-            height: asset.height,
+            width: rect.rotated ? h : w,
+            height: rect.rotated ? w : h,
             asset
           });
         }
@@ -154,9 +215,8 @@ function App() {
 
     setFinalSize({ w: currentW, h: currentH });
     setPackedAssets(packed);
-  }, [assets, autoSize, targetWidth, targetHeight, padding, algorithm]);
+  }, [assets, autoSize, targetWidth, targetHeight, padding, algorithm, allowRotate, enableTrim]);
 
-  // Canvas'a çizim yapma
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -167,15 +227,37 @@ function App() {
 
     packedAssets.forEach(p => {
       if (p.asset.imgElement) {
-        ctx.drawImage(p.asset.imgElement, p.x, p.y, p.width, p.height);
+        ctx.save();
+        
+        const sourceX = enableTrim ? p.asset.trimRect.x : 0;
+        const sourceY = enableTrim ? p.asset.trimRect.y : 0;
+        const sourceW = enableTrim ? p.asset.trimRect.w : p.asset.width;
+        const sourceH = enableTrim ? p.asset.trimRect.h : p.asset.height;
+
+        if (p.rotated) {
+          ctx.translate(p.x + p.width / 2, p.y + p.height / 2);
+          ctx.rotate(-Math.PI / 2);
+          // When rotated, width and height logic swap visually
+          ctx.drawImage(
+            p.asset.imgElement, 
+            sourceX, sourceY, sourceW, sourceH,
+            -p.height / 2, -p.width / 2, p.height, p.width
+          );
+        } else {
+          ctx.drawImage(
+            p.asset.imgElement,
+            sourceX, sourceY, sourceW, sourceH,
+            p.x, p.y, p.width, p.height
+          );
+        }
+        ctx.restore();
       }
     });
-  }, [packedAssets, finalSize]);
+  }, [packedAssets, finalSize, enableTrim]);
 
   const handleExport = () => {
     if (packedAssets.length === 0 || !canvasRef.current) return;
     
-    // PNG İndirme
     canvasRef.current.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob);
@@ -187,7 +269,6 @@ function App() {
       }
     });
 
-    // JSON İndirme (Koordinatlar)
     const jsonData = {
       meta: {
         image: 'spritesheet.png',
@@ -195,15 +276,24 @@ function App() {
         size: { w: finalSize.w, h: finalSize.h },
         scale: 1,
         algorithm: algorithm,
-        padding: padding
+        padding: padding,
+        allowRotation: allowRotate,
+        trimmed: enableTrim
       },
       frames: packedAssets.reduce((acc, p) => {
+        const w = enableTrim ? p.asset.trimRect.w : p.asset.width;
+        const h = enableTrim ? p.asset.trimRect.h : p.asset.height;
+        
         acc[p.asset.name] = {
           frame: { x: p.x, y: p.y, w: p.width, h: p.height },
-          rotated: false,
-          trimmed: false,
-          spriteSourceSize: { x: 0, y: 0, w: p.width, h: p.height },
-          sourceSize: { w: p.width, h: p.height }
+          rotated: !!p.rotated,
+          trimmed: enableTrim,
+          spriteSourceSize: { 
+            x: enableTrim ? p.asset.trimRect.x : 0, 
+            y: enableTrim ? p.asset.trimRect.y : 0, 
+            w, h 
+          },
+          sourceSize: { w: p.asset.width, h: p.asset.height }
         };
         return acc;
       }, {} as any)
@@ -218,35 +308,39 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h2>Sprite Packer <span className="version">v2.1</span></h2>
+          <h2>Sprite Packer <span className="version">v3.0 PRO</span></h2>
         </div>
 
         <div className="sidebar-content">
           <div className="settings-section">
             <h3>Settings</h3>
             
-            <div className="form-group">
-              <label>PACKING ALGORITHM</label>
-              <div className="select-wrapper">
-                <select value={algorithm} onChange={(e) => setAlgorithm(e.target.value)} className="select-input">
-                  <option value="MaxRects">MaxRects</option>
-                  {/* Bin Packing eklenebilir, şu an default MaxRects */}
-                </select>
-              </div>
+            <div className="form-group row-checkbox">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" checked={autoSize} onChange={(e) => setAutoSize(e.target.checked)} 
+                  style={{ accentColor: 'var(--accent-sage-green)' }}
+                /> AUTO-SIZE CANVAS
+              </label>
             </div>
 
             <div className="form-group row-checkbox">
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                 <input 
-                  type="checkbox" 
-                  checked={autoSize} 
-                  onChange={(e) => setAutoSize(e.target.checked)} 
+                  type="checkbox" checked={enableTrim} onChange={(e) => setEnableTrim(e.target.checked)} 
                   style={{ accentColor: 'var(--accent-sage-green)' }}
-                />
-                AUTO-SIZE CANVAS (TIGHT FIT)
+                /> ENABLE TRIMMING
+              </label>
+            </div>
+
+            <div className="form-group row-checkbox">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" checked={allowRotate} onChange={(e) => setAllowRotate(e.target.checked)} 
+                  style={{ accentColor: 'var(--accent-sage-green)' }}
+                /> ALLOW ROTATION
               </label>
             </div>
 
@@ -310,7 +404,6 @@ function App() {
         </div>
       </aside>
 
-      {/* Main Canvas Area */}
       <main className="main-content">
         <div className="dropzone-container">
           <input 

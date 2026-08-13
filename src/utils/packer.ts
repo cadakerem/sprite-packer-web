@@ -4,6 +4,7 @@ export interface Rect {
   width: number;
   height: number;
   id?: string;
+  rotated?: boolean;
 }
 
 export class MaxRectsPacker {
@@ -15,11 +16,11 @@ export class MaxRectsPacker {
   constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
-    this.freeRectangles.push({ x: 0, y: 0, width, height });
+    this.freeRectangles.push({ x: 0, y: 0, width, height, rotated: false });
   }
 
-  public insert(width: number, height: number, id: string): Rect | null {
-    let bestNode: Rect = { x: 0, y: 0, width: 0, height: 0 };
+  public insert(width: number, height: number, id: string, allowRotation: boolean = false): Rect | null {
+    let bestNode: Rect = { x: 0, y: 0, width: 0, height: 0, rotated: false };
     let bestShortSideFit = Number.MAX_VALUE;
     let bestLongSideFit = Number.MAX_VALUE;
 
@@ -28,6 +29,8 @@ export class MaxRectsPacker {
     // Find the best free rectangle to place this rectangle using Best Short Side Fit
     for (let i = 0; i < this.freeRectangles.length; i++) {
       const freeRect = this.freeRectangles[i];
+      
+      // Try Normal Orientation
       if (freeRect.width >= width && freeRect.height >= height) {
         const leftoverHoriz = Math.abs(freeRect.width - width);
         const leftoverVert = Math.abs(freeRect.height - height);
@@ -40,6 +43,27 @@ export class MaxRectsPacker {
           bestNode.width = width;
           bestNode.height = height;
           bestNode.id = id;
+          bestNode.rotated = false;
+          bestShortSideFit = shortSideFit;
+          bestLongSideFit = longSideFit;
+          bestFreeRectIndex = i;
+        }
+      }
+
+      // Try Rotated Orientation
+      if (allowRotation && freeRect.width >= height && freeRect.height >= width) {
+        const leftoverHoriz = Math.abs(freeRect.width - height);
+        const leftoverVert = Math.abs(freeRect.height - width);
+        const shortSideFit = Math.min(leftoverHoriz, leftoverVert);
+        const longSideFit = Math.max(leftoverHoriz, leftoverVert);
+
+        if (shortSideFit < bestShortSideFit || (shortSideFit === bestShortSideFit && longSideFit < bestLongSideFit)) {
+          bestNode.x = freeRect.x;
+          bestNode.y = freeRect.y;
+          bestNode.width = height; // Rotated width
+          bestNode.height = width; // Rotated height
+          bestNode.id = id;
+          bestNode.rotated = true;
           bestShortSideFit = shortSideFit;
           bestLongSideFit = longSideFit;
           bestFreeRectIndex = i;
