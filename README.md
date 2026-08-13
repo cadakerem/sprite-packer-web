@@ -19,11 +19,14 @@ A modern, browser-based Sprite Sheet packing tool designed specifically for game
 4. Keep `AUTO-SIZE CANVAS` checked for the best fit, or uncheck it to force a custom Power-of-Two (POT) resolution.
 5. Click **EXPORT SPRITESHEET** to get your `.png` and `.json`.
 
-## Tech Stack 🛠️
-- **Frontend:** React + TypeScript
-- **Build Tool:** Vite
-- **Styling:** Custom Vanilla CSS (Dark Theme optimized for developer eye-strain)
-- **Algorithm:** MaxRects BSSF (Best Short Side Fit)
+## 🛠 Tech Stack
+- **React 19**
+- **TypeScript**
+- **Vite**
+- **HTML5 Canvas** (for all rendering and image processing)
+
+## 📝 License
+This project is licensed under the [MIT License](LICENSE).
 
 ## Local Development
 ```bash
