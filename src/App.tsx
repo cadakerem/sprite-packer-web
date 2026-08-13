@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { DragEvent as ReactDragEvent } from 'react';
-import TrimWorker from './workers/trimWorker?worker';
+import { trimWorkerPool } from './utils/WorkerPool';
 import './App.css';
 import { MaxRectsPacker } from './utils/packer';
 import type { Rect } from './utils/packer';
@@ -54,12 +54,8 @@ function App() {
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
-        const worker = new TrimWorker();
-        worker.onmessage = (e) => {
-          const { rect } = e.data;
-          
+        trimWorkerPool.process(file, file.name, (rect) => {
           setAssets(prev => {
-            // Check if file with same name already exists to prevent duplicates
             if (prev.some(a => a.name === file.name)) return prev;
             
             const newAssets = [...prev, {
@@ -74,10 +70,7 @@ function App() {
             }];
             return newAssets.sort((a, b) => a.name.localeCompare(b.name));
           });
-          
-          worker.terminate();
-        };
-        worker.postMessage({ file, id: file.name });
+        });
       };
       img.src = url;
     });
