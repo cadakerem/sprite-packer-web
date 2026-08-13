@@ -95,6 +95,9 @@ function App() {
       img.onload = () => {
         const trimRect = calculateTrimRect(img);
         setAssets(prev => {
+          // Check if file with same name already exists to prevent duplicates
+          if (prev.some(a => a.name === file.name)) return prev;
+          
           const newAssets = [...prev, {
             id: Math.random().toString(36).substring(7),
             name: file.name,
@@ -105,7 +108,6 @@ function App() {
             imgElement: img,
             trimRect
           }];
-          // Group by sorting alphabetically
           return newAssets.sort((a, b) => a.name.localeCompare(b.name));
         });
       };
@@ -113,17 +115,25 @@ function App() {
     });
   };
 
-  const handleDragOver = (e: ReactDragEvent<HTMLDivElement>) => {
+  const removeAsset = (id: string) => {
+    setAssets(prev => prev.filter(a => a.id !== id));
+  };
+
+  const clearAllAssets = () => {
+    setAssets([]);
+  };
+
+  const handleDragOver = (e: ReactDragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e: ReactDragEvent<HTMLDivElement>) => {
+  const handleDragLeave = (e: ReactDragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e: ReactDragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: ReactDragEvent<HTMLElement>) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -393,7 +403,16 @@ function App() {
           <div className="sprite-list-section">
             <div className="section-header">
               <h3>Sprite List</h3>
-              <span className="badge">{assets.length} assets</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-icon" title="Add Assets" onClick={() => fileInputRef.current?.click()}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                {assets.length > 0 && (
+                  <button className="btn-icon text-danger" title="Clear All" onClick={clearAllAssets}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
+                )}
+              </div>
             </div>
             {assets.length === 0 ? (
               <div className="empty-list">No assets loaded yet.</div>
@@ -402,7 +421,10 @@ function App() {
                 {assets.map(asset => (
                   <li key={asset.id} className="asset-item">
                     <img src={asset.url} alt={asset.name} className="asset-thumb" />
-                    <span className="asset-name">{asset.name}</span>
+                    <span className="asset-name" title={asset.name}>{asset.name}</span>
+                    <button className="btn-remove" onClick={() => removeAsset(asset.id)} title="Remove">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -417,7 +439,25 @@ function App() {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main 
+        className="main-content"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDragging && assets.length > 0 && (
+          <div className="drag-overlay">
+            <div className="dropzone-content">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <h3>Drop to Add More Assets</h3>
+            </div>
+          </div>
+        )}
+
         <div className="dropzone-container">
           <input 
             type="file" multiple accept="image/*" 
@@ -429,9 +469,6 @@ function App() {
           {assets.length === 0 ? (
             <div 
               className={`dropzone ${isDragging ? 'dragging' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
             >
               <div className="dropzone-content">
