@@ -453,8 +453,8 @@ function App() {
                  width={finalSize.w}
                  height={finalSize.h}
                  style={{ 
-                   transform: `scale(${zoom / 100})`, 
-                   transformOrigin: 'top left',
+                   width: `${(finalSize.w * zoom) / 100}px`,
+                   height: `${(finalSize.h * zoom) / 100}px`,
                    boxShadow: '0 0 20px rgba(0,0,0,0.5)',
                    background: 'url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgvwMDwnxhMDGBEUjy0Mhg1gGEwMAxhGByEwSjEgAEmGo0CDDCBgQEA8yYwE1kX5jMAAAAASUVORK5CYII=)'
                  }}
