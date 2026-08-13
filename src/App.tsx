@@ -1,6 +1,7 @@
 import { useState, useRef, DragEvent, useEffect } from 'react';
 import './App.css';
-import { MaxRectsPacker, Rect } from './utils/packer';
+import { MaxRectsPacker } from './utils/packer';
+import type { Rect } from './utils/packer';
 
 interface SpriteAsset {
   id: string;
