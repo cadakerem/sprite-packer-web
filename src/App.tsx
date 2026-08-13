@@ -1,4 +1,5 @@
-import { useState, useRef, DragEvent, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import type { DragEvent } from 'react';
 import './App.css';
 import { MaxRectsPacker } from './utils/packer';
 import type { Rect } from './utils/packer';
