@@ -84,6 +84,7 @@ function App() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const processFiles = (files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
@@ -215,6 +216,18 @@ function App() {
 
     setFinalSize({ w: currentW, h: currentH });
     setPackedAssets(packed);
+
+    // Auto-fit Zoom
+    setTimeout(() => {
+      if (wrapperRef.current && currentW > 0 && currentH > 0) {
+        const availableW = wrapperRef.current.clientWidth - 64;
+        const availableH = wrapperRef.current.clientHeight - 64;
+        const scaleX = availableW / currentW;
+        const scaleY = availableH / currentH;
+        const bestScale = Math.min(scaleX, scaleY, 1);
+        setZoom(Math.max(10, Math.floor(bestScale * 100)));
+      }
+    }, 10);
   }, [assets, autoSize, targetWidth, targetHeight, padding, algorithm, allowRotate, enableTrim]);
 
   useEffect(() => {
@@ -434,7 +447,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="canvas-wrapper">
+            <div className="canvas-wrapper" ref={wrapperRef}>
                <canvas 
                  ref={canvasRef}
                  width={finalSize.w}
