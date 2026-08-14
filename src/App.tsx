@@ -54,12 +54,13 @@ function App() {
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
-        trimWorkerPool.process(file, file.name, (rect) => {
+        const assetId = Math.random().toString(36).substring(7);
+        trimWorkerPool.process(file, assetId, (rect) => {
           setAssets(prev => {
             if (prev.some(a => a.name === file.name)) return prev;
             
             const newAssets = [...prev, {
-              id: Math.random().toString(36).substring(7),
+              id: assetId,
               name: file.name,
               url,
               width: img.width,
