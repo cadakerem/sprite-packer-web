@@ -33,6 +33,7 @@ function App() {
   const [autoSize, setAutoSize] = useState(true);
   const [allowRotate, setAllowRotate] = useState(false);
   const [enableTrim, setEnableTrim] = useState(false);
+  const [sortByName, setSortByName] = useState(false);
   const [targetWidth, setTargetWidth] = useState(1024);
   const [targetHeight, setTargetHeight] = useState(1024);
   const [padding, setPadding] = useState(2);
@@ -111,6 +112,9 @@ function App() {
     }
 
     const sortedAssets = [...assets].sort((a, b) => {
+      if (sortByName) {
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      }
       const aHeight = enableTrim ? a.trimRect.h : a.height;
       const bHeight = enableTrim ? b.trimRect.h : b.height;
       return bHeight - aHeight;
@@ -200,7 +204,7 @@ function App() {
         setZoom(Math.max(10, Math.floor(bestScale * 100)));
       }
     }, 10);
-  }, [assets, autoSize, targetWidth, targetHeight, padding, algorithm, allowRotate, enableTrim]);
+  }, [assets, autoSize, targetWidth, targetHeight, padding, algorithm, allowRotate, enableTrim, sortByName]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -327,6 +331,20 @@ function App() {
                   style={{ accentColor: 'var(--accent-sage-green)' }}
                 /> ALLOW ROTATION
               </label>
+            </div>
+
+            <div className="form-group row-checkbox">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" checked={sortByName} onChange={(e) => setSortByName(e.target.checked)} 
+                  style={{ accentColor: 'var(--accent-sage-green)' }}
+                /> SORT BY NAME
+              </label>
+              {sortByName && (
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', paddingLeft: '24px', lineHeight: '1.4' }}>
+                  Uses natural sort (1, 2, 3… not 1, 10, 2…)
+                </span>
+              )}
             </div>
 
             {!autoSize && (
