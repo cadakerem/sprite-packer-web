@@ -36,7 +36,7 @@ function App() {
   const [sortByName, setSortByName] = useState(false);
   const [targetWidth, setTargetWidth] = useState(1024);
   const [targetHeight, setTargetHeight] = useState(1024);
-  const [padding, setPadding] = useState(2);
+  const [padding, setPadding] = useState(1);
   const [zoom, setZoom] = useState(100);
   
   const [isDragging, setIsDragging] = useState(false);
