@@ -4,7 +4,7 @@
 
 A modern, browser-based Sprite Sheet packing tool designed specifically for game developers. Drag and drop your loose PNG animation frames, pack them efficiently using the MaxRects algorithm, and export the generated Sprite Sheet and coordinate JSON metadata instantly—all without a server.
 
-## Features
+## ⚡ Features
 - **100% Client-Side:** No servers, no uploads. Everything processes securely and instantly in your browser using HTML5 Canvas.
 - **Drag & Drop Interface:** Upload images natively by dropping them into the app.
 - **MaxRects Packing Algorithm:** Industry-standard bin packing that eliminates wasted transparent space.
@@ -19,13 +19,13 @@ A modern, browser-based Sprite Sheet packing tool designed specifically for game
 4. Keep `AUTO-SIZE CANVAS` checked for the best fit, or uncheck it to force a custom Power-of-Two (POT) resolution.
 5. Click **EXPORT SPRITESHEET** to get your `.png` and `.json`.
 
-## Tech Stack
+## 🛠️ Tech Stack
 - **React 19**
 - **TypeScript**
 - **Vite**
 - **HTML5 Canvas** (for all rendering and image processing)
 
-## License
+## 📜 License
 This project is licensed under the [MIT License](LICENSE).
 
 ## Local Development
