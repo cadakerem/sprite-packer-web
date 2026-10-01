@@ -12,21 +12,18 @@ A modern, browser-based Sprite Sheet packing tool designed specifically for game
 - **Live Canvas Preview & Zoom:** Real-time visualization of the packed sprite sheet on a checkerboard background to inspect padding.
 - **Game Engine Ready Export:** Downloads both the `spritesheet.png` and a `.json` file containing precise X/Y coordinates for engines like MonoGame, Unity, and Godot.
 
-## How to Use
-1. Visit the [Live Site](https://cadakerem.github.io/sprite-packer-web/).
-2. Drag and drop your individual sprite/animation frames into the central dropzone.
-3. Adjust the `Padding` if you need spacing between sprites to prevent bleeding.
-4. Keep `AUTO-SIZE CANVAS` checked for the best fit, or uncheck it to force a custom Power-of-Two (POT) resolution.
-5. Click **EXPORT SPRITESHEET** to get your `.png` and `.json`.
-
 ## 🛠️ Tech Stack
 - **React 19**
 - **TypeScript**
 - **Vite**
 - **HTML5 Canvas** (for all rendering and image processing)
 
-## 📜 License
-This project is licensed under the [MIT License](LICENSE).
+## How to Use
+1. Visit the [Live Site](https://cadakerem.github.io/sprite-packer-web/).
+2. Drag and drop your individual sprite/animation frames into the central dropzone.
+3. Adjust the `Padding` if you need spacing between sprites to prevent bleeding.
+4. Keep `AUTO-SIZE CANVAS` checked for the best fit, or uncheck it to force a custom Power-of-Two (POT) resolution.
+5. Click **EXPORT SPRITESHEET** to get your `.png` and `.json`.
 
 ## Local Development
 ```bash
@@ -39,3 +36,13 @@ npm run dev
 # Build for production
 npm run build
 ```
+
+## 🧑‍💻 Developer & Contributions
+Developed by Kerem Barbaros Karnabat (@cadakerem).
+
+> **Note on Repository Structure:** [TODO: Add any specific notes about the repository structure here, e.g., source vs build artifacts.]
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](../../issues).
+
+## 📜 License
+This project is licensed under the [MIT License](LICENSE).
