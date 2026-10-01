@@ -40,7 +40,7 @@ npm run build
 ## 🧑‍💻 Developer & Contributions
 Developed by Kerem Barbaros Karnabat (@cadakerem).
 
-> **Note on Repository Structure:** [TODO: Add any specific notes about the repository structure here, e.g., source vs build artifacts.]
+> **Note on Repository Structure:** This is a 100% client-side React + TypeScript application bundled with Vite. The core MaxRects packing algorithm and HTML5 Canvas processing logic are entirely contained within the `src/` directory. There is no backend; running `npm run build` generates a fully static application ready for deployment via GitHub Pages or any standard static host.
 
 Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](../../issues).
 
